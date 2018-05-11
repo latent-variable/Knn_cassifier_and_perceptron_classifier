@@ -39,6 +39,7 @@ def Knn_Classifier(x_test,x_train,y_train,k,p):
         k_count = 0
         neighbors = []
         #Inner for loop iterates through training points
+        #To find the all the K nearest neighbors
         for y in range(np.size(y_train)):
             d_new = distance(x_test[x],x_train[y],p)
             if d_new < d_old or k_count <= k :
@@ -49,8 +50,6 @@ def Knn_Classifier(x_test,x_train,y_train,k,p):
         neighbors = sorted(neighbors,key=getKey)
         count_2 = 0
         count_4 = 0
-        #print(neighbors)
-        #print("************************************")
         #count the class of the k nearest neighbors
         for i in range(k):
             if neighbors[i][1] == 2:
@@ -60,6 +59,8 @@ def Knn_Classifier(x_test,x_train,y_train,k,p):
         #decide the class of the of the test point
         if count_2 > count_4:
             y_pred = np.append(y_pred,2)
+        elif count_2 == count_4:
+            y_pred = np.append(y_pred,neighbors[0][1])
         else:
             y_pred = np.append(y_pred,4)
 
@@ -70,11 +71,16 @@ def Knn_Classifier(x_test,x_train,y_train,k,p):
 #Begin question 2 Evalutation[45%]
 #*****************************************************************************
 def Cross_Validation(data,k,p):
+    #shuffle data
+    np.random.shuffle(data)
     #calculate the fold_size
     fold_begin = 0
     fold_end = int(np.size(data,0)/10)
-    fold_size = fold_end
+    fold_size = fold_end -fold_begin
     error_rate = []
+    accuracy = []
+    sensitivity = []
+    specificity = []
     #iterates through the data 10 times
     for j in range(10):
         #append extra points to the last iteration
@@ -90,7 +96,7 @@ def Cross_Validation(data,k,p):
         y_train = np.delete(y_train,remove_test_from_train,0)
         print("Fold range :" +str(fold_begin)+" - " + str(fold_end))
 
-        #retrive the actual values
+        #retrive the actual values of the testing points
         actual = data[fold_begin:fold_end,9]
 
         #Knn_Classifier to retrive predicted values
@@ -100,18 +106,36 @@ def Cross_Validation(data,k,p):
         sidebyside = np.column_stack((actual,pred))
         #print(sidebyside)
 
-        #Calculate the error
+        #Calculate the error, accuracy, sensitivity and specificity
         error = 0.0
+        sens1 = 0.0
+        sens2 = 0.0
+        speci1 = 0.0
+        speci2 = 0.0
         for i in range(len(actual)):
+            if(actual[i]==2 ):          #sensitivity: total number of benign
+                sens1 +=1
+            elif(actual[i]==4 )        #specificity: total number of malignant
+                speci1 +=1
+            if(pred[i] == 2 && actual[i] == 2):     #sensitivity: # predicted benign /  total number of benign
+                sens2 +=1
+            elif(pred[i] == 4 && actual[i] == 4):   #specificity: # predicted malignant / total number of malignant
+                speci2 +=1
+
             if(actual[i] != pred[i] ):
                 error+=1
+        sensitivity.append(sens2/sens1)
+        specificity.append(speci2/speci1)
         error_rate.append(float(error/fold_size))
-        print("Error rate "+ str(error_rate[j]))
+        accuracy.append(1 - error_rate[j])
+        # print("Error rate "+ str(error_rate[j]))
+        # print("Accuracy  "+ str(accuracy[j]))
+        # print("Sensitivity " + str(sensitivity[j]))
+        # print("Specificity " + str(specificity[j]))
 
-        raw_input()
         fold_begin = fold_end
         fold_end = fold_end + fold_size
-    return (error_rate)
+    return (error_rate,accuracy,sensitivity,specificity)
 #END of question 2 Evalutation
 #*****************************************************************************
 #Question 3 Perceptron [30%]-Extra Credit
@@ -219,7 +243,7 @@ def Cross_Validation_perceptron(data):
         weights = train_perceptron(input_x,output_y, w_init)
 
         #  /-----------------------------------------------------
-        #/evaluate the Perceptron classifier
+        #/evaluate the Perceptron classifier ///below are some good weights
         #\------------------------------------------------------
         #weights = np.array([690.1052085,-53.76081527,-39.50214537,-19.1930896, -3.8676253,18.82719073,-21.11888355,6.07904847,-11.6877823,-43.66775949])
         #weights = np.array([68.89660005, -4.54788773, -4.04097265, -2.2572996, -0.30597967,  0.87090774,-2.26879302, 0.15780697, -0.09539544, -5.01148695])
@@ -247,5 +271,63 @@ def Cross_Validation_perceptron(data):
 
 if __name__ == '__main__':
     data = Get_Data()
-    #knn_error = Cross_Validation(data,3,2)
-    Perceptron_error = Cross_Validation_perceptron(data)
+
+    #Perceptron_error = Cross_Validation_perceptron(data)
+
+    #************************************
+    #Question 2 graphs
+    #************************************
+
+    knn_error = [None]*10
+    knn_accuracy = [None]*10
+    knn_sensitivity = [None]*10
+    knn_specificity = [None]*10
+
+    accuracy_std = []
+    accuracy_mean = []
+
+    sensitivity_std = []
+    sensitivity_mean = []
+
+    specificity_std = []
+    specificity_mean = []
+    j = 2
+    for i in range (1,11):
+        print("p = "+str(j)+" k = "+str(i))
+        knn_error[i-1],knn_accuracy[i-1],knn_sensitivity[i-1],knn_specificity[i-1] = Cross_Validation(data,i,j)
+        accuracy_std.append(np.std(np.array(knn_accuracy[i-1])))
+        accuracy_mean.append(np.mean(np.array(knn_accuracy[i-1])))
+
+        sensitivity_std.append(np.std(np.array(knn_sensitivity[i-1])))
+        sensitivity_mean.append(np.mean(np.array(knn_sensitivity[i-1])))
+
+        specificity_std.append(np.std(np.array(knn_specificity[i-1])))
+        specificity_mean.append(np.mean(np.array(knn_specificity[i-1])))
+
+    accuracy = plt.figure(1)
+    x = np.arange(1, 11)
+    y = accuracy_mean
+    accuracy = plt.errorbar(x, y, xerr = 0, yerr=accuracy_std, color = 'green', ecolor='crimson',capsize=5, capthick=2  )
+    plt.xlabel("K = number of nearest neighbors")
+    plt.ylabel("Accuracy Performace")
+    plt.title("Error_Bar Accuracy vs K with p =" + str(j))
+
+    sensitivity = plt.figure(2)
+    x = np.arange(1, 11)
+    y = sensitivity_mean
+    sensitivity = plt.errorbar(x, y, xerr = 0, yerr=sensitivity_std, color = 'indigo', ecolor='lightsalmon', capsize=5, capthick=2 )
+    plt.xlabel("K = number of nearest neighbors")
+    plt.ylabel("Sensitivity Performace")
+    plt.title("Error_Bar Sensitivity vs K with p =" + str(j))
+
+    specificity = plt.figure(3)
+    x = np.arange(1, 11)
+    y = specificity_mean
+    specificity = plt.errorbar(x, y, xerr = 0, yerr=specificity_std, color = 'deepskyblue', ecolor='plum',capsize=5, capthick=2  )
+    plt.xlabel("K = number of nearest neighbors")
+    plt.ylabel("Specificity Performace")
+    plt.title("Error_Bar Specificity vs K with p =" + str(j))
+
+    plt.show()
+
+    raw_input()
