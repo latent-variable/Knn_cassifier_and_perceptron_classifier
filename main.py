@@ -77,6 +77,7 @@ def Cross_Validation(data,k,p):
     fold_begin = 0
     fold_end = int(np.size(data,0)/10)
     fold_size = fold_end -fold_begin
+    #measurements for the data
     error_rate = []
     accuracy = []
     sensitivity = []
@@ -115,11 +116,11 @@ def Cross_Validation(data,k,p):
         for i in range(len(actual)):
             if(actual[i]==2 ):          #sensitivity: total number of benign
                 sens1 +=1
-            elif(actual[i]==4 )        #specificity: total number of malignant
+            elif(actual[i]==4 ):        #specificity: total number of malignant
                 speci1 +=1
-            if(pred[i] == 2 && actual[i] == 2):     #sensitivity: # predicted benign /  total number of benign
+            if(pred[i] == 2 and actual[i] == 2):     #sensitivity: # predicted benign /  total number of benign
                 sens2 +=1
-            elif(pred[i] == 4 && actual[i] == 4):   #specificity: # predicted malignant / total number of malignant
+            elif(pred[i] == 4 and actual[i] == 4):   #specificity: # predicted malignant / total number of malignant
                 speci2 +=1
 
             if(actual[i] != pred[i] ):
@@ -174,9 +175,9 @@ def train_perceptron(input_x, output_y, w):
 
         #calculate error, if needed keep training
         total_error = total_error/float(np.size(input_x,0))
-        print("Error on training = " + str(total_error))
+        #print("Error on training = " + str(total_error))
         # raw_input()
-        if(total_error <= .027):
+        if(total_error <= .036):
             print (w)
             wrong = False
 
@@ -196,14 +197,19 @@ def classy_perceptron(input_x,w):
             pred.append(4)
     return pred
 
-def Cross_Validation_perceptron(data):
+def Cross_Validation_perceptron(data,Random_weights):
+    #shuffle data
+    np.random.shuffle(data)
     #calculate the fold_size
     fold_begin = 0
     fold_end = int(np.size(data,0)/10)
     fold_size = fold_end
 
-    error_rate = [] #Initialized list that is returned
-
+    #measurements for the data
+    error_rate = []
+    accuracy = []
+    sensitivity = []
+    specificity = []
     #iterates through the data 10 times
     for j in range(10):
         #append extra instance to the last iteration
@@ -231,11 +237,13 @@ def Cross_Validation_perceptron(data):
         #retrive the actual values
         actual = data[fold_begin:fold_end,9]
         #Initialized weights
-        w_init = np.zeros(10,dtype=float)
-        #w_init = 2*np.random.rand(10)-1
+        if(Random_weights):
+            w_init = 2*np.random.rand(10)-1     #random values between [-1,1]
+        else:
+            w_init = np.zeros(10,dtype=float)   #0 Initialized weights
 
-        print(w_init)
-        raw_input()
+        #print(w_init)
+        #raw_input()
 
         #  /-----------------------------------------------------
         #/train Perceptron retrive the wights for the Perceptron
@@ -254,30 +262,48 @@ def Cross_Validation_perceptron(data):
         sidebyside = np.column_stack((actual,pred))
         #print(sidebyside)
 
-        #Calculate the error
+        #Calculate the error, accuracy, sensitivity and specificity
         error = 0.0
+        sens1 = 0.0
+        sens2 = 0.0
+        speci1 = 0.0
+        speci2 = 0.0
         for i in range(len(actual)):
+            if(actual[i]==2 ):          #sensitivity: total number of benign
+                sens1 +=1
+            elif(actual[i]==4 ):        #specificity: total number of malignant
+                speci1 +=1
+            if(pred[i] == 2 and actual[i] == 2):     #sensitivity: # predicted benign /  total number of benign
+                sens2 +=1
+            elif(pred[i] == 4 and actual[i] == 4):   #specificity: # predicted malignant / total number of malignant
+                speci2 +=1
+
             if(actual[i] != pred[i] ):
                 error+=1
+        sensitivity.append(sens2/sens1)
+        specificity.append(speci2/speci1)
         error_rate.append(float(error/fold_size))
-        print("Error rate "+ str(error_rate[j]))
+        accuracy.append(1 - error_rate[j])
+        # print("Error rate "+ str(error_rate[j]))
+        # print("Accuracy  "+ str(accuracy[j]))
+        # print("Sensitivity " + str(sensitivity[j]))
+        # print("Specificity " + str(specificity[j]))
 
-        raw_input()
         fold_begin = fold_end
         fold_end = fold_end + fold_size
 
-    return (error_rate)
+    return (error_rate,accuracy,sensitivity,specificity)
 
 
 if __name__ == '__main__':
     data = Get_Data()
 
-    #Perceptron_error = Cross_Validation_perceptron(data)
+    #
 
     #************************************
     #Question 2 graphs
     #************************************
-
+    '''
     knn_error = [None]*10
     knn_accuracy = [None]*10
     knn_sensitivity = [None]*10
@@ -291,7 +317,7 @@ if __name__ == '__main__':
 
     specificity_std = []
     specificity_mean = []
-    j = 2
+    j = 1
     for i in range (1,11):
         print("p = "+str(j)+" k = "+str(i))
         knn_error[i-1],knn_accuracy[i-1],knn_sensitivity[i-1],knn_specificity[i-1] = Cross_Validation(data,i,j)
@@ -327,6 +353,60 @@ if __name__ == '__main__':
     plt.xlabel("K = number of nearest neighbors")
     plt.ylabel("Specificity Performace")
     plt.title("Error_Bar Specificity vs K with p =" + str(j))
+
+    plt.show()
+
+    raw_input()
+    '''
+    #************************************
+    #Question 3 graphs
+    #************************************
+    accuracy_std = []
+    accuracy_mean = []
+
+    sensitivity_std = []
+    sensitivity_mean = []
+
+    specificity_std = []
+    specificity_mean = []
+
+    for i in range (10):
+        print("Iteration: "+str(i))
+
+        p_error,p_accuracy,p_sensitivity,p_specificity = Cross_Validation_perceptron(data,Random_weights=True)
+
+        accuracy_std.append(np.std(np.array(p_accuracy)))
+        accuracy_mean.append(np.mean(np.array(p_accuracy)))
+
+        sensitivity_std.append(np.std(np.array(p_sensitivity)))
+        sensitivity_mean.append(np.mean(np.array(p_sensitivity)))
+
+        specificity_std.append(np.std(np.array(p_specificity)))
+        specificity_mean.append(np.mean(np.array(p_specificity)))
+
+    accuracy = plt.figure(1)
+    x = np.arange(1, 11)
+    y = accuracy_mean
+    accuracy = plt.errorbar(x, y, xerr = 0, yerr=accuracy_std, color = 'y', ecolor='indianred',capsize=5, capthick=2  )
+    plt.xlabel("10 independent instances")
+    plt.ylabel("Accuracy Performace")
+    plt.title("Error_Bar Accuracy vs Instance with random init weights" )
+
+    sensitivity = plt.figure(2)
+    x = np.arange(1, 11)
+    y = sensitivity_mean
+    sensitivity = plt.errorbar(x, y, xerr = 0, yerr=sensitivity_std, color = 'blueviolet', ecolor='lightpink', capsize=5, capthick=2 )
+    plt.xlabel("10 independent instances")
+    plt.ylabel("Sensitivity Performace")
+    plt.title("Error_Bar Sensitivity vs Instance with random init weights")
+
+    specificity = plt.figure(3)
+    x = np.arange(1, 11)
+    y = specificity_mean
+    specificity = plt.errorbar(x, y, xerr = 0, yerr=specificity_std, color = 'royalblue', ecolor='violet',capsize=5, capthick=2  )
+    plt.xlabel("10 independent instances")
+    plt.ylabel("Specificity Performace")
+    plt.title("Error_Bar Specificity vs Instance with random init weights" )
 
     plt.show()
 
